@@ -14,7 +14,6 @@ export class CorsMiddleware implements NestMiddleware {
     if (req.method === 'OPTIONS') {
       return res.sendStatus(200);
     }
-    
     next();
   }
 }
