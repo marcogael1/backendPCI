@@ -53,7 +53,7 @@ export class AuthService {
     user.resetTokenExpires = expires;
     await user.save();
 
-    const resetLink = `http://localhost:4200/reset-password?token=${token}`;
+    const resetLink = `https://pci-tecno.vercel.app/reset-password?token=${token}`;
 
     const mailOptions = {
       from: 'ironsafe3@gmail.com',
@@ -91,7 +91,7 @@ export class AuthService {
     const verificationToken = randomBytes(32).toString('hex');
     this.pendingUsers.set(verificationToken, { username, email, password });
 
-    const verificationLink = `http://localhost:4200/verify-email?token=${verificationToken}`;
+    const verificationLink = `https://pci-tecno.vercel.app/verify-email?token=${verificationToken}`;
     const mailOptions = {
       from: 'ironsafe3@gmail.com',
       to: email,

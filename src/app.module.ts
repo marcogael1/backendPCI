@@ -6,7 +6,7 @@ import { CorsMiddleware } from './cors.middleware';
 @Module({
   imports: [
         AdminModule, 
-    MongooseModule.forRoot('mongodb://localhost:27017/pciDataBase'),
+    MongooseModule.forRoot('mongodb+srv://marco:marco@cluster0.7b1khsh.mongodb.net/pciDataBase'),
     AuthModule,
     AdminModule
   ],
