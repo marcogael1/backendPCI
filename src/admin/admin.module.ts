@@ -8,5 +8,6 @@ import { Information, InformationSchema } from '../schemas/information.schema';
   imports: [MongooseModule.forFeature([{ name: Information.name, schema: InformationSchema }])],
   controllers: [AdminController],
   providers: [AdminService],
+  exports: [AdminController],
 })
 export class AdminModule {}
