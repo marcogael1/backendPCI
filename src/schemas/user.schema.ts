@@ -43,6 +43,16 @@ export class User {
 
   @Prop({ default: false })
   isVerified: boolean;
+
+  @Prop()
+  verificationToken?: string; 
+
+  @Prop()
+  verificationTokenExpiry?: Date; 
+
+  @Prop({ type: [{ date: Date }], default: [] })
+  blockedHistory: { date: Date }[];
+
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

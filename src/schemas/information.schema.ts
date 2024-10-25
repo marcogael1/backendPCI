@@ -3,13 +3,26 @@ import { Document } from 'mongoose';
 
 export type InformationDocument = Information & Document;
 
-@Schema()
+@Schema({ collection: 'information' }) 
 export class Information {
+  
   @Prop({ required: true })
-  type: string;
+  title: string; 
 
-  @Prop({ required: true, type: String })
-  description: string;
+  @Prop({ required: true })
+  content: string; 
+
+  @Prop({ required: true })
+  version: string; 
+
+  @Prop({ type: Date, default: Date.now }) 
+  effectiveDate: Date;
+
+  @Prop({ default: false })
+  isDeleted: boolean; 
+
+  @Prop({ default: false })
+  isCurrentVersion: boolean;
 }
 
 export const InformationSchema = SchemaFactory.createForClass(Information);

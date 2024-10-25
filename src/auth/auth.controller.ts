@@ -4,20 +4,19 @@ import {
   Body,
   Patch,
   Res,
-  Query,
+  Get,
   UnauthorizedException,
   ConflictException,
-  HttpException,
-  HttpStatus,
-  BadRequestException
+  BadRequestException,
+  Req
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import axios from 'axios';
 import { Response } from 'express';
-
+import { LogService } from '../services/logs.service';
+import { Request } from 'express';
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) { }
+  constructor(private readonly authService: AuthService, private readonly logService: LogService,) { }
 
   @Post('login')
   async login(
@@ -30,8 +29,10 @@ export class AuthController {
         loginDto.password,
         res,
       );
+      await this.logService.createLog(`Inicio de sesión: ${loginDto.email}`);
       return response;
     } catch (error) {
+      await this.logService.createLog(`Error de inicio de sesión: ${loginDto.email}`);
       throw new UnauthorizedException(error.message || 'Error al iniciar sesión.');
     }
   }
@@ -53,48 +54,6 @@ export class AuthController {
       throw new UnauthorizedException(error.message || 'Error al verificar el código MFA.');
     }
   }
-
-  @Post('register')
-  async register(
-    @Body() registerDto: { username: string; email: string; password: string; recaptchaToken: string }
-  ) {
-    const { username, email, password, recaptchaToken } = registerDto;
-    const isRecaptchaValid = await this.verifyRecaptcha(recaptchaToken);
-    if (!isRecaptchaValid) {
-      throw new HttpException('reCAPTCHA no válido', HttpStatus.FORBIDDEN);
-    }
-
-    try {
-      await this.authService.sendVerificationEmail(username, email, password);
-      return {
-        message: 'Registro iniciado. Revisa tu correo para verificar tu cuenta.',
-      };
-    } catch (error) {
-      throw new HttpException('No se pudo iniciar el registro.', HttpStatus.CONFLICT);
-    }
-  }
-
-  @Post('verify-email')
-  async verifyEmail(@Body('token') token: string): Promise<any> {
-    console.log('Token recibido para verificación:', token);
-    return await this.authService.verifyEmailToken(token);
-  }
-
-
-
-  private async verifyRecaptcha(token: string): Promise<boolean> {
-    const secretKey = '6LdUFV8qAAAAAMxD51fEspUDsvkBTbbVR9x3fuOn';
-    const url = `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${token}`;
-
-    try {
-      const response = await axios.post(url);
-      return response.data.success;
-    } catch (error) {
-      console.error('Error verificando reCAPTCHA:', error);
-      return false;
-    }
-  }
-
 
   @Post('validate-token')
   async validateToken(@Body('token') token: string): Promise<any> {
@@ -141,6 +100,65 @@ export class AuthController {
         );
       }
       throw new BadRequestException('Error al cambiar la contraseña.');
+    }
+  }
+
+  @Patch('max-login-attempts')
+  updateMaxLoginAttempts(@Body('maxAttempts') maxAttempts: number) {
+    this.authService.setMaxLoginAttempts(maxAttempts);
+    return { message: `Número máximo de intentos de inicio de sesión actualizado a ${maxAttempts}` };
+  }
+
+  @Patch('update-token-expiry')
+  async updateTokenExpiry(@Body('newExpiry') newExpiry: number) {
+    await this.authService.updateTokenExpiry(newExpiry);
+    return {
+      message: `Tiempo de expiración del token actualizado a ${newExpiry} minutos`
+    };
+  }
+  @Get('verification-token-expiry')
+  async getVerificationTokenExpiry() {
+    const expiry = await this.authService.getVerificationTokenExpiry();
+    return { expiry };
+  }
+
+  @Get('verification-email-message')
+  async getVerificationEmailMessage() {
+    const message = await this.authService.getVerificationEmailMessage();
+    return { message };
+  }
+  
+  @Patch('update-verification-email-message')
+  async updateVerificationEmailMessage(@Body('newMessage') newMessage: string) {
+    await this.authService.updateVerificationEmailMessage(newMessage);
+    return {
+      message: `Mensaje de correo de verificación actualizado.`
+    };
+  }
+
+  @Get('max-login-attempts')
+  getMaxLoginAttempts() {
+    return { maxAttempts: this.authService.getMaxLoginAttempts() };
+  }
+
+  @Post('logout')
+  logout(@Res() res: Response) {
+    res.clearCookie('jwt', {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+    });
+    return res.status(200).json({ message: 'Sesión cerrada correctamente.' });
+  }
+
+
+  @Get('validate-session')
+  async validateSession(@Req() req: Request, @Res() res: Response) {
+    try {
+      const userData = await this.authService.validateSessionjwt(req);
+      return res.status(200).json({ message: 'Sesión válida', role: userData.role });
+    } catch (error) {
+      throw new UnauthorizedException('Sesión inválida.');
     }
   }
 
